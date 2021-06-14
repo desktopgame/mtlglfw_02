@@ -12,10 +12,11 @@ if(UNIX AND NOT APPLE)
 endif()
 
 find_package(GLFW REQUIRED)
+find_package(Eigen REQUIRED)
 
 add_subdirectory(mtlpp)
 add_executable(mtlglfw_01)
-target_include_directories(mtlglfw_01 PUBLIC ${GLFW_INCLUDE_DIRS} mtlpp)
+target_include_directories(mtlglfw_01 PUBLIC ${GLFW_INCLUDE_DIRS} ${EIGEN_INCLUDE_DIRS} mtlpp)
 target_link_libraries(mtlglfw_01
         PRIVATE
         ${GLFW_LIBRARIES}
