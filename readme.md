@@ -4,7 +4,7 @@ mtlppにはいくつかglfw向けの機能が足りないのでforkして少し�
 https://github.com/desktopgame/mtlpp
 
 また、以下のサンプルを参考にしています。  
-https://gist.github.com/gcatlin/987be74e2d58da96093a7598f3fbfb27
+https://github.com/takezoh-1127/mtlpp_tutorial/tree/master/tutorial_00
 
 ## 実行方法
 以下でXcodeプロジェクトを作成し、xcodeprojを開いてデバッグ
