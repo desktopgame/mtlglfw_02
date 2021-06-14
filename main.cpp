@@ -21,6 +21,23 @@ int main(void) {
   swapchain.SetDevice(gpu);
   swapchain.SetOpaque(true);
 
+  const char shaderSrc[] = R"""(
+		#include <metal_stdlib>
+		using namespace metal;
+
+		// 頂点シェーダー.
+		vertex float4 vertFunc(const device packed_float3* vertexArray [[buffer(0)]], unsigned int vID [[vertex_id]])
+		{
+			return float4(vertexArray[vID], 1.0);
+		}
+
+		// フラグメントシェーダー.
+		fragment half4 fragFunc()
+		{
+			return half4(1.0, 0.0, 0.0, 1.0);
+		}
+	)""";
+
   glfwInit();
   glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
   GLFWwindow *window = glfwCreateWindow(640, 480, "GLFW Metal", NULL, NULL);
@@ -33,23 +50,68 @@ int main(void) {
   glfwSetKeyCallback(window, quit);
   mtlpp::ClearColor color = mtlpp::ClearColor(0, 0, 0, 1);
 
+  mtlpp::Library library =
+      gpu.NewLibrary(shaderSrc, mtlpp::CompileOptions(), nullptr);
+
+  assert(library);
+
+  mtlpp::Function vertFunc = library.NewFunction("vertFunc");
+  assert(vertFunc.GetPtr());
+
+  mtlpp::Function fragFunc = library.NewFunction("fragFunc");
+  assert(fragFunc.GetPtr());
+
+  // 頂点バッファの生成.
+  const float vertexData[] = {
+      0.0f, 1.0f, 0.0f, -1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 0.0f,
+  };
+
+  auto g_vertexBuffer =
+      gpu.NewBuffer(vertexData, sizeof(vertexData),
+                    mtlpp::ResourceOptions::CpuCacheModeDefaultCache);
+  assert(g_vertexBuffer.GetPtr());
+
+  // レンダーパイプラインの生成.
+  mtlpp::RenderPipelineDescriptor desc;
+  desc.SetVertexFunction(vertFunc);
+  desc.SetFragmentFunction(fragFunc);
+
+  auto attach = desc.GetColorAttachments();
+  attach[0].SetPixelFormat(mtlpp::PixelFormat::BGRA8Unorm);
+
+  auto g_renderPipelineState = gpu.NewRenderPipelineState(desc, nullptr);
+  assert(g_renderPipelineState.GetPtr());
+
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
-
-    color.Red = (color.Red > 1.0) ? 0 : color.Red + 0.01;
     mtlpp::MetalDrawable surface = swapchain.NextDrawable();
 
-    mtlpp::RenderPassDescriptor pass;
-    pass.GetColorAttachments()[0].SetClearColor(color);
-    pass.GetColorAttachments()[0].SetLoadAction(mtlpp::LoadAction::Clear);
-    pass.GetColorAttachments()[0].SetStoreAction(mtlpp::StoreAction::Store);
-    pass.GetColorAttachments()[0].SetTexture(surface.GetTexture());
+    mtlpp::CommandBuffer commandBuffer = queue.CommandBuffer();
+    assert(commandBuffer.GetPtr());
 
-    mtlpp::CommandBuffer buffer = queue.CommandBuffer();
-    mtlpp::RenderCommandEncoder encoder = buffer.RenderCommandEncoder(pass);
-    encoder.EndEncoding();
-    buffer.Present(surface);
-    buffer.Commit();
+    mtlpp::RenderPassDescriptor renderPassDesc;
+    renderPassDesc.GetColorAttachments()[0].SetClearColor(color);
+    renderPassDesc.GetColorAttachments()[0].SetLoadAction(
+        mtlpp::LoadAction::Clear);
+    renderPassDesc.GetColorAttachments()[0].SetStoreAction(
+        mtlpp::StoreAction::Store);
+    renderPassDesc.GetColorAttachments()[0].SetTexture(surface.GetTexture());
+
+    if (renderPassDesc) {
+      mtlpp::RenderCommandEncoder encoder =
+          commandBuffer.RenderCommandEncoder(renderPassDesc);
+      assert(encoder.GetPtr());
+
+      encoder.SetRenderPipelineState(g_renderPipelineState);
+      encoder.SetVertexBuffer(g_vertexBuffer, 0, 0);
+      encoder.Draw(mtlpp::PrimitiveType::Triangle, 0, 3);
+      encoder.EndEncoding();
+
+      commandBuffer.Present(surface);
+    }
+
+    commandBuffer.Commit();
+    commandBuffer.WaitUntilCompleted();
   }
 
   glfwDestroyWindow(window);
