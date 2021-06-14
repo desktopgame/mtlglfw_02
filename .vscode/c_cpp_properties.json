@@ -4,7 +4,8 @@
             "name": "Mac",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/opt/homebrew/include/GLFW"
+                "/opt/homebrew/include/GLFW",
+                "/opt/homebrew/include/eigen3"
             ],
             "defines": [],
             "macFrameworkPath": [
