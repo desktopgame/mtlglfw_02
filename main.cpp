@@ -66,10 +66,10 @@ int main(void) {
       0.0f, 1.0f, 0.0f, -1.0f, -1.0f, 0.0f, 1.0f, -1.0f, 0.0f,
   };
 
-  auto g_vertexBuffer =
+  auto vertexBuffer =
       gpu.NewBuffer(vertexData, sizeof(vertexData),
                     mtlpp::ResourceOptions::CpuCacheModeDefaultCache);
-  assert(g_vertexBuffer.GetPtr());
+  assert(vertexBuffer.GetPtr());
 
   // レンダーパイプラインの生成.
   mtlpp::RenderPipelineDescriptor desc;
@@ -79,8 +79,8 @@ int main(void) {
   auto attach = desc.GetColorAttachments();
   attach[0].SetPixelFormat(mtlpp::PixelFormat::BGRA8Unorm);
 
-  auto g_renderPipelineState = gpu.NewRenderPipelineState(desc, nullptr);
-  assert(g_renderPipelineState.GetPtr());
+  auto renderPipelineState = gpu.NewRenderPipelineState(desc, nullptr);
+  assert(renderPipelineState.GetPtr());
 
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
@@ -102,8 +102,8 @@ int main(void) {
           commandBuffer.RenderCommandEncoder(renderPassDesc);
       assert(encoder.GetPtr());
 
-      encoder.SetRenderPipelineState(g_renderPipelineState);
-      encoder.SetVertexBuffer(g_vertexBuffer, 0, 0);
+      encoder.SetRenderPipelineState(renderPipelineState);
+      encoder.SetVertexBuffer(vertexBuffer, 0, 0);
       encoder.Draw(mtlpp::PrimitiveType::Triangle, 0, 3);
       encoder.EndEncoding();
 
